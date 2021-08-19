@@ -1,0 +1,19 @@
+{
+  "name": "gulptest",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/gongahreum/gulptest.git",
+  "author": "GongAh-reum <gal8965@gmail.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@babel/core": "^7.15.0",
+    "@babel/preset-env": "^7.15.0",
+    "@babel/register": "^7.15.3",
+    "gulp": "^4.0.2",
+    "gulp-cli": "^2.3.0"
+  },
+  "scripts": {
+    "dev": "gulp dev",
+    "build": "gulp build"
+  }
+}
