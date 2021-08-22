@@ -1,3 +1,5 @@
+@function ico-arrow_popup_basic_m($fillcolor, $strokecolor){ @return "data:image/svg+xml, %3Csvg width='24' height='24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='%23828282' d='M4 4h16v1.5H4z'/%3E%3Cpath fill='%23828282' d='M18.5 20V4H20v16z'/%3E%3Cpath fill='%23828282' d='M4.01 18.87 18.86 4.02l1.06 1.06L5.072 19.93z'/%3E%3C/svg%3E";}
+@function ico-layer_close($fillcolor, $strokecolor){ @return "data:image/svg+xml, %3Csvg width='24' height='24' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath fill='#{$fillcolor}' d='M5.99 5.28 18.718 18.01l-.707.707L5.283 5.988z'/%3E%3Cpath fill='#{$fillcolor}' d='M5.283 18.012 18.011 5.284l.707.707L5.99 18.72z'/%3E%3C/svg%3E";}
 
 
-$svg-map: ();
+$svg-map: ('ico-arrow_popup_basic_m': ('name': 'ico-arrow_popup_basic_m', 'folder': 'svgs'),'ico-layer_close': ('name': 'ico-layer_close', 'folder': 'svgs'),);

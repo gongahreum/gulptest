@@ -2,6 +2,21 @@
 @import '_reset';
 
 body {
-	color: blue;
+	color: #000;
 	font-size: 20px;
+}
+.js-focus-visible :focus:not(.focus-visible) {
+	outline: 0;
+}
+
+.icon-svg {
+	&:before {
+		content: '';
+		display: block;
+		width: 40px;
+		height: 40px;
+		background: inline-svg('ico-arrow_popup_basic_m', #1886ff) center center no-repeat;
+		background-size: 10px 10px;
+		transition: all 0.3s;
+	}
 }
