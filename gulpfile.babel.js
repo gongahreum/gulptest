@@ -2,6 +2,7 @@ const gulp = require('gulp'),
 	del = require('del'),
 	fileinclude = require('gulp-file-include'),
 	browserSync = require('browser-sync').create(),
+	newer = require('gulp-newer'),
 	imagemin = require('gulp-imagemin'),
 	through2 = require('through2'),
 	pretty = require('pretty'),
@@ -13,6 +14,9 @@ const gulp = require('gulp'),
 	replace = require('gulp-replace'),
 	sassInlineSvg = require('gulp-sass-inline-svg'),
 	svgmin = require('gulp-svgmin'),
+	jshint = require('gulp-jshint'),
+	stylish = require('jshint-stylish'),
+	// plumber = require('gulp-plumber'),
 	notify = require('gulp-notify');
 
 const paths = {
@@ -40,14 +44,9 @@ const paths = {
 		src: 'src/@resources/scripts/*.js',
 		dest: 'src/@resources/scripts/',
 		gulp: 'gulpfile.babel.js',
-		// vendor: 'src/@resources/scripts/libs/*.js',
+		vendor: 'src/@resources/scripts/libs/',
 	},
 };
-
-function prettyGulp(file, enc, callback) {
-	file.contents = Buffer.from(pretty(file.contents.toString(), { ocd: true }));
-	callback(null, file);
-}
 
 function server(cb) {
 	browserSync.init({
@@ -58,18 +57,20 @@ function server(cb) {
 	cb();
 }
 
-function watchImages() {
-	return gulp.src(['sources/assets/images/**']).pipe(browserSync.reload({ stream: true }));
-}
-
 function watch(cb) {
-	gulp.watch('src/html/**', gulp.series(htmlBuild));
-	gulp.watch(paths.svgs.src, gulp.series(stylesSvg));
-	gulp.watch(paths.scss.src, gulp.series(watchStyles));
-	gulp.watch('src/@resources/styles/*.css', gulp.series(copyStyles));
-	gulp.watch(paths.scripts.src, gulp.series(watchScripts));
+	gulp.watch('src/html/**', htmlBuild);
+	gulp.watch(paths.svgs.src, stylesSvg);
+	gulp.watch(paths.scss.src, watchStyles);
+	gulp.watch('src/@resources/styles/*.css', copyStyles);
+	gulp.watch([paths.scripts.src, '!src/@resources/scripts/libs/*'], watchScripts);
 	gulp.watch(['src/@resources/images/*'], gulp.parallel(watchImages, copyImages));
 	cb();
+}
+
+/* html */
+function prettyGulp(file, enc, callback) {
+	file.contents = Buffer.from(pretty(file.contents.toString(), { ocd: true }));
+	callback(null, file);
 }
 
 function htmlInclude() {
@@ -81,20 +82,23 @@ function htmlInclude() {
 				basepath: 'src/html/@includes',
 			})
 		)
+		.on('error', notify.onError('Error: <%= error.message %>'))
 		.pipe(through2.obj(prettyGulp))
 		.pipe(gulp.dest(paths.html.dest))
 		.pipe(browserSync.reload({ stream: true }));
 }
+function htmlBuild(cb) {
+	htmlInclude();
+	cb();
+}
 
+/* css */
 function styles() {
 	return gulp
 		.src(paths.scss.src)
 		.pipe(sourcemaps.init({ loadMaps: true }))
 		.pipe(sass({ outputStyle: 'expanded', indentType: 'tab', indentWidth: 2 }))
-		.on('error', function (err) {
-			notify().write(err);
-			this.emit('end');
-		})
+		.on('error', notify.onError('Error: <%= error.message %>'))
 		.pipe(gulp.dest(paths.scss.dest))
 		.pipe(autoprefixer({ cascade: false }))
 		.pipe(cleanCss({ format: 'keep-breaks' }))
@@ -115,19 +119,50 @@ function stylesSvg() {
 		.pipe(replace('call($functionname', 'call(get-function($functionname)'))
 		.pipe(gulp.dest(paths.svgs.dest));
 }
+function watchStyles(cb) {
+	styles();
+	copyStyles();
+	cb();
+}
+function stylesBuild(cb) {
+	stylesSvg();
+	styles();
+	cb();
+}
 // gulp.task('styles:libs', function () {
 // 	return gulp.src(['./node_modules/swiper/dist/css/swiper.min.css']).pipe(gulp.dest(paths.styles.dest));
 // });
 
+/* js */
 function scripts() {
-	return gulp.src(paths.scripts.src).pipe(browserSync.reload({ stream: true }));
+	return gulp
+		.src(paths.scripts.src)
+		.pipe(jshint())
+		.pipe(jshint.reporter(stylish))
+		.pipe(browserSync.reload({ stream: true }));
 }
 function scriptsLibs() {
 	return gulp
 		.src(['node_modules/jquery/dist/jquery.min.js', 'node_modules/focus-visible/dist/focus-visible.min.js'])
-		.pipe(gulp.dest(paths.scripts.dest));
+		.pipe(gulp.dest(paths.scripts.vendor));
+}
+function watchScripts(cb) {
+	scripts();
+	copyScripts();
+	cb();
+}
+function scriptsBuild(cb) {
+	scriptsLibs();
+	scripts();
+	cb();
 }
 
+/* images */
+function watchImages() {
+	return gulp.src(['sources/assets/images/**']).pipe(browserSync.reload({ stream: true }));
+}
+
+/* clean */
 function cleanDev() {
 	return del([paths.dev]);
 }
@@ -135,6 +170,7 @@ function cleanBuild() {
 	return del([paths.build]);
 }
 
+/* copy file */
 function copyAssets() {
 	return gulp
 		.src(['src/@resources/**', '!**/@scss', '!**/@scss/**', '!**/@sprites', '!**/@sprites/**', '!**/svgs', '!**/svgs/**'])
@@ -149,6 +185,7 @@ function copyStyles() {
 function copyImages() {
 	return gulp
 		.src('src/@resources/images/**')
+		.pipe(newer('dev/assets/images/'))
 		.pipe(imagemin({ verbose: true }))
 		.pipe(gulp.dest('dev/assets/images/'));
 }
@@ -156,38 +193,19 @@ function copyBuild() {
 	return gulp.src(['dev/**', '!dev/assets/styles/**.map']).pipe(gulp.dest('build/'));
 }
 
-function watchStyles(cb) {
-	gulp.series(styles, copyStyles);
-	cb();
-}
-function watchScripts(cb) {
-	gulp.series(scripts, copyScripts);
-	cb();
-}
-
-function htmlBuild(cb) {
-	gulp.series(htmlInclude);
-	cb();
-}
-function stylesBuild(cb) {
-	gulp.series(stylesSvg, styles);
-	cb();
-}
-function scriptsBuild(cb) {
-	gulp.series(scriptsLibs, scripts);
-	cb();
-}
-
 exports.clean = gulp.series(cleanDev, cleanBuild);
 exports.default = gulp.series(
 	gulp.parallel(htmlInclude, stylesBuild, scriptsBuild),
-	// htmlInclude,
-	// stylesSvg,
-	// styles,
-	// scriptsLibs,
-	// scripts,
 	copyImages,
 	copyAssets,
 	gulp.parallel(server, watch)
 );
-exports.build = gulp.series(cleanDev, cleanBuild, gulp.parallel(htmlBuild, stylesBuild, scriptsBuild), copyAssets, copyBuild);
+exports.build = gulp.series(
+	cleanDev,
+	cleanBuild,
+	gulp.parallel(htmlBuild, stylesBuild, scriptsBuild),
+	copyImages,
+	copyAssets,
+	copyBuild,
+	server
+);
